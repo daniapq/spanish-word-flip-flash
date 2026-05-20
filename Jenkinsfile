@@ -1,41 +1,34 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:22-alpine'
-            // This shares the agent container across all stages naturally
-        }
-    }
-    
+    agent none // ⚡ FIX 1: Remove top-level docker to prevent nested container tracking errors
+
     options {
         ansiColor('xterm')
     }
 
     stages {
-        stage('build') {
-            steps {
-                sh 'npm ci'
-                sh 'npm run build'
+        stage('build and test') {
+            agent {
+                docker {
+                    image 'node:22-slim' // ⚡ FIX 2: Swap alpine for slim. Includes full system tools natively.
+                }
             }
-        }
-
-        stage('test') {
-            parallel {
-                stage('unit tests') {
+            stages { // Nested stages keep build and test organized in one container instance
+                stage('Build') {
                     steps {
-                        // Changed to 'npm run' to strictly use the installed local vitest
-                        sh 'npm run test:unit' 
+                        sh 'npm ci'
+                        sh 'npm run build'
+                    }
+                }
+                stage('Unit Tests') {
+                    steps {
+                        sh 'npm run test:unit'
                     }
                 }
             }
         }
 
         stage('deploy') {
-            // We temporarily override the agent just for deployment
-            agent {
-                docker {
-                    image 'alpine'
-                }
-            }
+            agent any // ⚡ FIX 3: Runs instantly on the host machine. No slow image downloads or tracking bugs.
             steps {
                 echo 'Mock deployment was successful!'
             }

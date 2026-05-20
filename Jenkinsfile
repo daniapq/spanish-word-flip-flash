@@ -10,6 +10,7 @@ pipeline {
             agent {
                 docker {
                     image 'node:22-alpine'
+                    args '--user root'
                     reuseNode true
                 }
             }
@@ -25,6 +26,7 @@ pipeline {
                     agent {
                         docker {
                             image 'node:22-alpine'
+                            args '--user root'
                             reuseNode true
                         }
                     }
@@ -37,6 +39,7 @@ pipeline {
                     agent {
                         docker {
                             image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                            args '--ipc=host --user root'
                             reuseNode true
                         }
                     }
@@ -63,6 +66,7 @@ pipeline {
             agent {
                 docker {
                     image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                    args '--ipc=host --user root'
                     reuseNode true
                 }
             }

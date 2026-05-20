@@ -1,5 +1,5 @@
 pipeline {
-    agent none // Prevents global container conflicts
+    agent none // Evita conflictos de contenedores a nivel global
 
     options {
         ansiColor('xterm')
@@ -10,13 +10,18 @@ pipeline {
             agent {
                 docker {
                     image 'node:22-slim'
-                    args '--user root'
+                    args '--user root' // Permite permisos de escritura correctos en el workspace
                 }
             }
             steps {
+                // Limpia cualquier residuo de compilaciones congeladas anteriores
+                cleanWs()
+                
+                // Instala dependencias y compila el proyecto
                 sh 'npm ci'
                 sh 'npm run build'
-                // 📦 Save the built project files and node_modules for the parallel testing stages
+                
+                // 📦 Saca una copia de los archivos compilados y node_modules para las etapas en paralelo
                 stash name: 'compiled-app', useDefaultExcludes: false
             }
         }
@@ -30,7 +35,10 @@ pipeline {
                         }
                     }
                     steps {
+                        // Trae los archivos guardados en la etapa de Build
                         unstash 'compiled-app'
+                        
+                        // Ejecuta tus pruebas unitarias con Vitest
                         sh 'npm run test:unit'
                     }
                 }
@@ -38,13 +46,18 @@ pipeline {
                 stage('Integration Tests') {
                     agent {
                         docker {
+                            // ⚡ SINTAXIS CORREGIDA: Imagen oficial desde el registro de Microsoft sin "://"
                             image '://microsoft.com'
+                            
+                            // ⚙️ Argumentos críticos para evitar que los navegadores de Playwright se congelen en Docker
                             args '--ipc=host --user root'
                         }
                     }
                     steps {
+                        // Trae los archivos guardados en la etapa de Build
                         unstash 'compiled-app'
-                        // Runs integration tests instantly using MCR pre-installed browsers
+                        
+                        // Ejecuta tus pruebas de integración con Playwright
                         sh 'npx playwright test'
                     }
                 }
@@ -52,7 +65,7 @@ pipeline {
         }
 
         stage('Deploy') {
-            agent any
+            agent any // Se ejecuta instantáneamente en la máquina host sin descargar contenedores lentos
             steps {
                 echo 'Mock deployment was successful!'
             }

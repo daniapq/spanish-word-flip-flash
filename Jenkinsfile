@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:22-alpine'
+            // This shares the agent container across all stages naturally
+        }
+    }
     
     options {
         ansiColor('xterm')
@@ -7,11 +12,6 @@ pipeline {
 
     stages {
         stage('build') {
-            agent {
-                docker {
-                    image 'node:22-alpine'
-                }
-            }
             steps {
                 sh 'npm ci'
                 sh 'npm run build'
@@ -21,28 +21,22 @@ pipeline {
         stage('test') {
             parallel {
                 stage('unit tests') {
-                    agent {
-                        docker {
-                            image 'node:22-alpine'
-                            reuseNode true
-                        }
-                    }
                     steps {
-                        // Unit tests with Vitest
-                        sh 'npx vitest run --reporter=verbose'
+                        // Changed to 'npm run' to strictly use the installed local vitest
+                        sh 'npm run test:unit' 
                     }
                 }
             }
         }
 
         stage('deploy') {
+            // We temporarily override the agent just for deployment
             agent {
                 docker {
                     image 'alpine'
                 }
             }
             steps {
-                // Mock deployment which does nothing
                 echo 'Mock deployment was successful!'
             }
         }

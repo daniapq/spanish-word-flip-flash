@@ -1,83 +1,81 @@
 pipeline {
     agent any
-
+    
     options {
         ansiColor('xterm')
     }
 
     stages {
-
-        stage('Create Playwright Image') {
-            steps {
-                script {
-
-                    writeFile file: 'Dockerfile.playwright', text: '''
-FROM node:22-bookworm
-
-WORKDIR /app
-
-COPY package*.json ./
-
-RUN npm ci
-
-RUN npx playwright install --with-deps chromium
-
-COPY . .
-'''
-
-                    sh 'docker build -t my-playwright -f Dockerfile.playwright .'
-                }
-            }
-        }
-
         stage('build') {
             agent {
                 docker {
-                    image 'my-playwright'
-                    args '--ipc=host --init --user root'
+                    image 'node:22-alpine'
+                    args '--user root'
                     reuseNode true
                 }
             }
             steps {
+                sh 'npm ci'
                 sh 'npm run build'
             }
         }
 
-        stage('unit tests') {
+        stage('test') {
+            parallel {
+                stage('unit tests') {
+                    agent {
+                        docker {
+                            image 'node:22-alpine'
+                            args '--user root'
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        // Unit tests with Vitest
+                        sh 'npx vitest run --reporter=verbose'
+                    }
+                }
+                stage('integration tests') {
+                    agent {
+                        docker {
+                            image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                            args '--ipc=host --user root'
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        sh 'npx playwright test'
+                    }
+                }
+            }
+        }
+
+        stage('deploy') {
             agent {
                 docker {
-                    image 'my-playwright'
-                    args '--ipc=host --init --user root'
-                    reuseNode true
+                    image 'alpine'
                 }
             }
             steps {
-                sh 'npx vitest run --reporter=verbose'
+                // Mock deployment which does nothing
+                echo 'Mock deployment was successful!'
             }
         }
 
         stage('e2e') {
             agent {
                 docker {
-                    image 'my-playwright'
-                    args '--ipc=host --init --user root'
+                    image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                    args '--ipc=host --user root'
                     reuseNode true
                 }
             }
             environment {
-                CI = 'true'
                 E2E_BASE_URL = 'https://spanish-cards.netlify.app/'
             }
             steps {
-                sh 'npx playwright test --workers=1'
+                sh 'npx playwright test'
             }
-        }
-    }
-
-    post {
-        always {
-            sh 'docker image rm -f my-playwright || true'
-            sh 'rm -f Dockerfile.playwright || true'
         }
     }
 }

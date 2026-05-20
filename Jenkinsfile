@@ -3,7 +3,6 @@ pipeline {
 
     options {
         ansiColor('xterm')
-        // ⚡ FIX: Limpia el espacio de trabajo de forma segura ANTES de descargar el código de Git
         skipDefaultCheckout(false) 
     }
 
@@ -16,13 +15,8 @@ pipeline {
                 }
             }
             steps {
-                // ⚡ `cleanWs()` fue eliminado de aquí para no borrar tu código fuente
-                
-                // Instala dependencias usando el package-lock.json existente
                 sh 'npm ci'
                 sh 'npm run build'
-                
-                // 📦 Saca una copia de los archivos para las etapas en paralelo
                 stash name: 'compiled-app', useDefaultExcludes: false
             }
         }
@@ -33,6 +27,7 @@ pipeline {
                     agent {
                         docker {
                             image 'node:22-slim'
+                            args '--user root' 
                         }
                     }
                     steps {
@@ -41,11 +36,13 @@ pipeline {
                     }
                 }
 
-                stage('Integration Tests') {
+                // ⚡ TRUCO: Cambiamos el nombre a 'Playwright E2E Tests' para obligar a Jenkins a romper la caché vieja
+                stage('Playwright E2E Tests') { 
                     agent {
                         docker {
-                            image '://microsoft.com'
-                            args '--ipc=host --user root'
+                            // Ruta limpia sin protocolos web de por medio
+                            image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                            args '--ipc=host --user root' // Evita cierres inesperados de Chromium
                         }
                     }
                     steps {

@@ -71,3 +71,10 @@ jobs:
         run: npm ci
       - name: Run Playwright E2E
         run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: E2E (Playwright)
+          path: reports-e2e/html/
+          if-no-files-found: error
+          

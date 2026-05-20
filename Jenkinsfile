@@ -36,15 +36,9 @@ pipeline {
                     }
                 }
                 stage('integration tests') {
-                    agent {
-                        docker {
-                            image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
-                            args '--ipc=host --user root'
-                            reuseNode true
-                        }
-                    }
                     steps {
-                        sh 'npx playwright test'
+                        sh 'npx playwright install --with-deps chromium'
+                        sh 'npx playwright test --workers=1'
                     }
                 }
             }
@@ -63,18 +57,12 @@ pipeline {
         }
 
         stage('e2e') {
-            agent {
-                docker {
-                    image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
-                    args '--ipc=host --user root'
-                    reuseNode true
-                }
-            }
             environment {
                 E2E_BASE_URL = 'https://spanish-cards.netlify.app/'
             }
             steps {
-                sh 'npx playwright test'
+                sh 'npx playwright install --with-deps chromium'
+                sh 'npx playwright test --workers=1'
             }
         }
     }

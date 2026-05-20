@@ -28,16 +28,19 @@ pipeline {
                                 sh 'npm run test:unit'
                             }
                         }
-                        stage('integration tests') {
+                        stage('Integration Tests') {
                             agent {
                                 docker {
+                                    // ⚡ FIX 1: Correct MCR image registry path and tag
                                     image '://microsoft.com'
                                     args '--ipc=host --user root'
                                 }
                             }
                             steps {
-                                // Install the browser binaries manually inside the Node container
-                                sh 'npx playwright install --with-deps'
+                                // 📥 Bring the files in if you are using stash/unstash
+                                unstash 'project-files' 
+                                
+                                // ⚡ FIX 2: Pre-installed browsers exist, go straight to testing!
                                 sh 'npx playwright test'
                             }
                         }

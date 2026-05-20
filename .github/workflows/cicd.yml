@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     container:
-      image: mcr.microsoft.com/playwright:v1.54.2-jammy
+      image: mcr.microsoft.com/playwright:v1.60.0-jammy
       options: --user 1001
     env:
       E2E_BASE_URL: https://spanish-cards.netlify.app/

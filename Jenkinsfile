@@ -1,63 +1,79 @@
 pipeline {
     agent none 
 
-    options {
-        ansiColor('xterm')
-        skipDefaultCheckout(false) 
-    }
+    pipeline {
+        agent any
 
-    stages {
-        stage('Build Project') {
-            agent {
-                docker {
-                    image 'node:22-slim'
-                    args '--user root' 
-                }
-            }
-            steps {
-                sh 'npm ci'
-                sh 'npm run build'
-                stash name: 'compiled-app', useDefaultExcludes: false
-            }
+        options {
+            ansiColor('xterm')
         }
 
-        stage('Parallel Automated Testing') {
-            parallel {
-                stage('Unit Tests') {
-                    agent {
-                        docker {
-                            image 'node:22-slim'
-                            args '--user root' 
+        stages {
+            stage('build') {
+                agent {
+                    docker {
+                        image 'node:22-alpine'
+                        reuseNode true
+                    }
+                }
+                steps {
+                    sh 'npm ci'
+                    sh 'npm run build'
+                }
+            }
+
+            stage('test') {
+                parallel {
+                    stage('unit tests') {
+                        agent {
+                            docker {
+                                image 'node:22-alpine'
+                                reuseNode true
+                            }
+                        }
+                        steps {
+                            sh 'npx vitest run --reporter=verbose'
                         }
                     }
-                    steps {
-                        unstash 'compiled-app'
-                        sh 'npm run test:unit'
-                    }
-                }
 
-                // ⚡ TRUCO: Cambiamos el nombre a 'Playwright E2E Tests' para obligar a Jenkins a romper la caché vieja
-                stage('Playwright E2E Tests') { 
-                    agent {
-                        docker {
-                            // Ruta limpia sin protocolos web de por medio
-                            image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
-                            args '--ipc=host --user root' // Evita cierres inesperados de Chromium
+                    stage('integration tests') {
+                        agent {
+                            docker {
+                                image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                                reuseNode true
+                            }
                         }
-                    }
-                    steps {
-                        unstash 'compiled-app'
-                        sh 'npx playwright test'
+                        steps {
+                            sh 'npx playwright test'
+                        }
                     }
                 }
             }
-        }
 
-        stage('Deploy') {
-            agent any 
-            steps {
-                echo 'Mock deployment was successful!'
+            stage('deploy') {
+                agent {
+                    docker {
+                        image 'alpine'
+                    }
+                }
+                steps {
+                    echo 'Mock deployment was successful!'
+                }
+            }
+
+            stage('e2e') {
+                agent {
+                    docker {
+                        image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                        reuseNode true
+                    }
+                }
+                environment {
+                    E2E_BASE_URL = 'https://spanish-cards.netlify.app/'
+                }
+                steps {
+                    sh 'npx playwright test'
+                }
             }
         }
     }
-}

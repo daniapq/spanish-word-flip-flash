@@ -27,15 +27,9 @@ pipeline {
                             }
                         }
                         stage('integration tests') {
-                            agent {
-                                docker {
-                                    image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
-                                    // Gives Playwright permissions to run browsers without crashing
-                                    args '--ipc=host --user root' 
-                                    reuseNode true
-                                }
-                            }
                             steps {
+                                // Install the browser binaries manually inside the Node container
+                                sh 'npx playwright install --with-deps'
                                 sh 'npx playwright test'
                             }
                         }

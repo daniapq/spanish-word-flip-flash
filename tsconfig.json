@@ -1,15 +1,23 @@
 {
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
   ],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     },
-     "types": ["vitest/globals"], // Add this line
+    "types": [
+      "vitest/globals"
+    ], // Add this line
     "noImplicitAny": false,
     "noUnusedParameters": false,
     "skipLibCheck": true,

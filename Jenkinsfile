@@ -9,7 +9,9 @@ pipeline {
         stage('build and test') {
             agent {
                 docker {
-                    image 'node:22-slim' // ⚡ FIX 2: Swap alpine for slim. Includes full system tools natively.
+                    image 'node:22-slim'
+                    // ⚡ FIX: Forces the container to run as root so apt-get dependencies can install
+                    args '--user root' 
                 }
             }
             stages { // Nested stages keep build and test organized in one container instance

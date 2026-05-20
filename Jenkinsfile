@@ -29,6 +29,12 @@ pipeline {
                             }
                         }
                         stage('integration tests') {
+                            agent {
+                                docker {
+                                    image '://microsoft.com'
+                                    args '--ipc=host --user root'
+                                }
+                            }
                             steps {
                                 // Install the browser binaries manually inside the Node container
                                 sh 'npx playwright install --with-deps'

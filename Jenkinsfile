@@ -1,8 +1,10 @@
 pipeline {
-    agent none // Evita conflictos de contenedores a nivel global
+    agent none 
 
     options {
         ansiColor('xterm')
+        // ⚡ FIX: Limpia el espacio de trabajo de forma segura ANTES de descargar el código de Git
+        skipDefaultCheckout(false) 
     }
 
     stages {
@@ -10,18 +12,17 @@ pipeline {
             agent {
                 docker {
                     image 'node:22-slim'
-                    args '--user root' // Permite permisos de escritura correctos en el workspace
+                    args '--user root' 
                 }
             }
             steps {
-                // Limpia cualquier residuo de compilaciones congeladas anteriores
-                cleanWs()
+                // ⚡ `cleanWs()` fue eliminado de aquí para no borrar tu código fuente
                 
-                // Instala dependencias y compila el proyecto
+                // Instala dependencias usando el package-lock.json existente
                 sh 'npm ci'
                 sh 'npm run build'
                 
-                // 📦 Saca una copia de los archivos compilados y node_modules para las etapas en paralelo
+                // 📦 Saca una copia de los archivos para las etapas en paralelo
                 stash name: 'compiled-app', useDefaultExcludes: false
             }
         }
@@ -35,10 +36,7 @@ pipeline {
                         }
                     }
                     steps {
-                        // Trae los archivos guardados en la etapa de Build
                         unstash 'compiled-app'
-                        
-                        // Ejecuta tus pruebas unitarias con Vitest
                         sh 'npm run test:unit'
                     }
                 }
@@ -46,18 +44,12 @@ pipeline {
                 stage('Integration Tests') {
                     agent {
                         docker {
-                            // ⚡ SINTAXIS CORREGIDA: Imagen oficial desde el registro de Microsoft sin "://"
                             image '://microsoft.com'
-                            
-                            // ⚙️ Argumentos críticos para evitar que los navegadores de Playwright se congelen en Docker
                             args '--ipc=host --user root'
                         }
                     }
                     steps {
-                        // Trae los archivos guardados en la etapa de Build
                         unstash 'compiled-app'
-                        
-                        // Ejecuta tus pruebas de integración con Playwright
                         sh 'npx playwright test'
                     }
                 }
@@ -65,7 +57,7 @@ pipeline {
         }
 
         stage('Deploy') {
-            agent any // Se ejecuta instantáneamente en la máquina host sin descargar contenedores lentos
+            agent any 
             steps {
                 echo 'Mock deployment was successful!'
             }

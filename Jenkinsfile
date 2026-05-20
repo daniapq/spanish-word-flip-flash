@@ -1,15 +1,16 @@
 pipeline {
     agent any
-    
+
     options {
         ansiColor('xterm')
     }
 
     stages {
+
         stage('build') {
             agent {
                 docker {
-                    image 'node:22-alpine'
+                    image 'node:22-bookworm'
                     args '--user root'
                     reuseNode true
                 }
@@ -22,21 +23,31 @@ pipeline {
 
         stage('test') {
             parallel {
+
                 stage('unit tests') {
                     agent {
                         docker {
-                            image 'node:22-alpine'
+                            image 'node:22-bookworm'
                             args '--user root'
                             reuseNode true
                         }
                     }
                     steps {
-                        // Unit tests with Vitest
+                        sh 'npm ci'
                         sh 'npx vitest run --reporter=verbose'
                     }
                 }
+
                 stage('integration tests') {
+                    agent {
+                        docker {
+                            image 'node:22-bookworm'
+                            args '--user root'
+                            reuseNode true
+                        }
+                    }
                     steps {
+                        sh 'npm ci'
                         sh 'npx playwright install --with-deps chromium'
                         sh 'npx playwright test --workers=1'
                     }
@@ -48,22 +59,45 @@ pipeline {
             agent {
                 docker {
                     image 'alpine'
+                    reuseNode true
                 }
             }
             steps {
-                // Mock deployment which does nothing
                 echo 'Mock deployment was successful!'
             }
         }
 
         stage('e2e') {
+            agent {
+                docker {
+                    image 'node:22-bookworm'
+                    args '--user root'
+                    reuseNode true
+                }
+            }
             environment {
+                CI = 'true'
                 E2E_BASE_URL = 'https://spanish-cards.netlify.app/'
             }
             steps {
+                sh 'npm ci'
                 sh 'npx playwright install --with-deps chromium'
                 sh 'npx playwright test --workers=1'
             }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline finished.'
+        }
+
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+
+        failure {
+            echo 'Pipeline failed.'
         }
     }
 }

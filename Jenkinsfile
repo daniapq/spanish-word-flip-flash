@@ -7,16 +7,38 @@ pipeline {
 
     stages {
 
+        stage('Create Playwright Image') {
+            steps {
+                script {
+
+                    writeFile file: 'Dockerfile.playwright', text: '''
+FROM node:22-bookworm
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci
+
+RUN npx playwright install --with-deps chromium
+
+COPY . .
+'''
+
+                    sh 'docker build -t my-playwright -f Dockerfile.playwright .'
+                }
+            }
+        }
+
         stage('build') {
             agent {
                 docker {
-                    image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                    image 'my-playwright'
                     args '--ipc=host --init --user root'
                     reuseNode true
                 }
             }
             steps {
-                sh 'npm ci'
                 sh 'npm run build'
             }
         }
@@ -24,7 +46,7 @@ pipeline {
         stage('unit tests') {
             agent {
                 docker {
-                    image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                    image 'my-playwright'
                     args '--ipc=host --init --user root'
                     reuseNode true
                 }
@@ -37,7 +59,7 @@ pipeline {
         stage('e2e') {
             agent {
                 docker {
-                    image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                    image 'my-playwright'
                     args '--ipc=host --init --user root'
                     reuseNode true
                 }
@@ -49,6 +71,13 @@ pipeline {
             steps {
                 sh 'npx playwright test --workers=1'
             }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker image rm -f my-playwright || true'
+            sh 'rm -f Dockerfile.playwright || true'
         }
     }
 }

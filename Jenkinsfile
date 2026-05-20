@@ -19,22 +19,29 @@ pipeline {
                         sh 'npm run build'
                     }
                 }
-                stage('Unit Tests') {
-                    steps {
-                        sh 'npm run test:unit'
-                    }
-                }
-                stage('integration tests') {
-                    agent {
-                        docker {
-                            image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
-                            reuseNode true
+                stage ('test') {
+                    parallel {
+                        stage('Unit Tests') {
+                            steps {
+                                sh 'npm run test:unit'
+                            }
+                        }
+                        stage('integration tests') {
+                            agent {
+                                docker {
+                                    image 'mcr.microsoft.com/playwright:v1.54.2-jammy'
+                                    // Gives Playwright permissions to run browsers without crashing
+                                    args '--ipc=host --user root' 
+                                    reuseNode true
+                                }
+                            }
+                            steps {
+                                sh 'npx playwright test'
+                            }
                         }
                     }
-                    steps {
-                        sh 'npx playwright test'
-                    }
                 }
+                
             }
         }
 
